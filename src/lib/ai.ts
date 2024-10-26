@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleAIFileManager } from "@google/generative-ai/server";
 
 export const systemPrompt = `You are an AI assistant specialized exclusively in agriculture and crop management. Your role is to help users with:
             1. Crop price predictions based on historical data and market trends.
@@ -18,5 +19,8 @@ export const systemPrompt = `You are an AI assistant specialized exclusively in 
 const apiKey = "AIzaSyCIXbFS_XXvjoDcxhsolC31klxKLydNNvk";
 const genAI = new GoogleGenerativeAI(apiKey)
 export const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash"
+    model: "gemini-1.5-flash",
+    systemInstruction: systemPrompt
 })
+
+export const fileManager = new GoogleAIFileManager(apiKey)

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,12 +16,14 @@ import { Upload, Send } from "lucide-react";
 import Image from "next/image";
 import { api } from "@/trpc/react";
 import { botSchema } from "@/zod/schema";
+import Markdown from "react-markdown";
 
 export default function MitraAI() {
   const [messages, setMessages] = useState<
     {
       id: number;
       text: string | JSX.Element;
+      botResponse?: string;
       sender: string;
       file: File | null;
       dataUri?: string | null;
@@ -39,7 +41,27 @@ export default function MitraAI() {
   const [selectedLanguage, setSelectedLanguage] = useState("english");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const handleSendMessage = async() => {
+  const chatBot = api.chat.test.useMutation({
+    onSuccess: (data) => {
+      setMessages([
+        ...messages,
+        {
+          id: messages.length,
+          text: "",
+          botResponse: data.response,
+          sender: "bot",
+          file: null,
+          dataUri: null,
+        },
+      ]);
+    },
+    onError(error, variables, context) {
+      console.log(error);
+      alert("Error occured");
+    },
+  });
+
+  const handleSendMessage = async () => {
     const dataUri = selectedFile ? await fileToBase64(selectedFile) : null;
     const inputData = {
       id: messages.length,
@@ -52,6 +74,15 @@ export default function MitraAI() {
     setSelectedFile(null);
     setInputMessage("");
     // api call
+
+    const data = botSchema.parse({
+      id: messages.length,
+      text: inputData.text,
+      file: inputData.dataUri,
+      language: selectedLanguage,
+    });
+
+    chatBot.mutate(data);
   };
 
   function fileToBase64(file: File): Promise<string> {
@@ -59,6 +90,7 @@ export default function MitraAI() {
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = () => resolve(reader.result as string);
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
       reader.onerror = (error) => reject(error);
     });
   }
@@ -72,36 +104,19 @@ export default function MitraAI() {
     }
   };
 
-  const chatBot = api.chat.test.useMutation({
-    onSuccess: (data) => {
-      console.log(data);
-    },
-    onError(error, variables, context) {
-      console.log(error);
-    },
-  });
+  const scrollElement = useRef(null);
+  
+  useEffect(() => {
+    if (scrollElement?.current) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      scrollElement.current.scrollTop = scrollElement.current.scrollHeight;
+    }
+  }, [messages]);
 
   return (
     <div className="mx-auto flex h-[80vh] max-w-md flex-col p-4">
-      <Button
-        onClick={() => {
-          const message = messages[messages.length - 1] ;
-
-          const data = botSchema.parse({
-            id: message.id,
-            text: message?.text,
-            file: message?.dataUri,
-            language: selectedLanguage,
-          })
-
-          chatBot.mutate(data);          
-          
-        }}
-      >
-        click
-      </Button>
       <Card className="mb-4 flex-grow overflow-hidden">
-        <ScrollArea className="h-full">
+        <ScrollArea className="h-full" ref={scrollElement}>
           <CardContent className="space-y-4 p-4">
             {messages.map((message) => (
               <div
@@ -140,6 +155,7 @@ export default function MitraAI() {
                       ""
                     )}
                     {message.text}
+                    <Markdown>{message?.botResponse}</Markdown>
                   </div>
                 </div>
               </div>
