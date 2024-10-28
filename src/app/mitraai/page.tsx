@@ -73,8 +73,14 @@ export default function MitraAI() {
     setMessages([...messages, inputData]);
     setSelectedFile(null);
     setInputMessage("");
-    // api call
+    
+    // Reset the file input
+    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
 
+    // api call
     const data = botSchema.parse({
       id: messages.length,
       text: inputData.text,

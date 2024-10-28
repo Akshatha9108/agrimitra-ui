@@ -5,14 +5,22 @@ import { botSchema } from "@/zod/schema";
 import path from "path";
 import fs from "fs";
 
-let chat = model.startChat();
+// Store chat sessions by user/session ID
+const chatSessions = new Map();
 
 export const chatRouter = createTRPCRouter({
   test: publicProcedure.input(botSchema).mutation(async ({ input }) => {
+    // Get or create chat session
     if (input.id === 1) {
-      // conversation start
+      // Start new chat session
+      const newChat = model.startChat();
+      chatSessions.set("default", newChat); // Using "default" as session ID for now
+    }
 
-      chat = model.startChat();
+    // Get current chat session
+    const currentChat = chatSessions.get("default");
+    if (!currentChat) {
+      throw new Error("Chat session not found");
     }
 
     if (input.file) {
@@ -21,7 +29,7 @@ export const chatRouter = createTRPCRouter({
       const buffer = Buffer.from(base64Data, "base64");
       const file = new File([buffer], "image.jpg", { type: "image/jpeg" });
 
-      const filePath = path.join(".","uploads", "gemini_input.jpg");
+      const filePath = path.join(".", "uploads", "gemini_input.jpg");
 
       // Save the file
       fs.writeFile(filePath, buffer, (err) => {
@@ -37,13 +45,9 @@ export const chatRouter = createTRPCRouter({
         displayName: "image input from user based on plants",
       });
 
-      const botResponse = await model.generateContent([
+      const botResponse = await currentChat.sendMessage([
         `${input.text}. Please provide response in ${input.language}`,
         {
-            // fileData: {
-            //     fileUri: uploadResult.file.uri,
-            //     mimeType: uploadResult.file.mimeType,
-            // }
             inlineData: {
                 data: buffer.toString("base64"),
                 mimeType: file.type,
@@ -58,7 +62,7 @@ export const chatRouter = createTRPCRouter({
       }
     }
 
-    const botResponse = await chat.sendMessage(`${input.text}. Please provide response in ${input.language}`,);
+    const botResponse = await currentChat.sendMessage(`${input.text}. Please provide response in ${input.language}`);
 
     const response = botResponse.response.text();
 

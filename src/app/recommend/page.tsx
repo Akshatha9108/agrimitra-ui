@@ -49,8 +49,11 @@ const formSchema = z.object({
 
 export default function CropPricePredictor() {
   const [result, setResult] = useState<{
-    label: string;
-    price: number;
+    predictions: Array<{
+      crop: string;
+      confidence: number;
+      price: number;
+    }>;
   } | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -68,6 +71,7 @@ export default function CropPricePredictor() {
       N: 0,
       P: 0,
       K: 0,
+
     },
   });
 
@@ -84,15 +88,15 @@ export default function CropPricePredictor() {
       const data = await res.json();
       console.log(data);
 
-      toast(`Predicted Crop: ${data.label} Crop Price: ₹${data.price.toFixed(2)}`);
+      // Show toast for the top prediction
+      toast(`Top Prediction: ${data.predictions[0].crop} - ₹${data.predictions[0].price.toFixed(2)}`);
 
       setResult({
-        label: data.label,
-        price: data.price
+        predictions: data.predictions
       });
     } catch (error) {
       console.error(error);
-      toast("error");
+      toast("Error occurred while making prediction");
     }
   }
 
@@ -219,7 +223,7 @@ export default function CropPricePredictor() {
                   name="District"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>State</FormLabel>
+                      <FormLabel>District</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
@@ -230,10 +234,10 @@ export default function CropPricePredictor() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {districts.map((state, idx) => {
+                          {districts.map((district, idx) => {
                             return (
-                              <SelectItem key={idx} value={state}>
-                                {state}
+                              <SelectItem key={idx} value={district}>
+                                {district}
                               </SelectItem>
                             );
                           })}
@@ -248,7 +252,7 @@ export default function CropPricePredictor() {
                   name="Market"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>State</FormLabel>
+                      <FormLabel>Market</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
@@ -259,10 +263,10 @@ export default function CropPricePredictor() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {markets.map((state, idx) => {
+                          {markets.map((market, idx) => {
                             return (
-                              <SelectItem key={idx} value={state}>
-                                {state}
+                              <SelectItem key={idx} value={market}>
+                                {market}
                               </SelectItem>
                             );
                           })}
@@ -277,7 +281,7 @@ export default function CropPricePredictor() {
                   name="Grade"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>State</FormLabel>
+                      <FormLabel>Grade</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
@@ -288,10 +292,10 @@ export default function CropPricePredictor() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {grades.map((state, idx) => {
+                          {grades.map((grade, idx) => {
                             return (
-                              <SelectItem key={idx} value={state}>
-                                {state}
+                              <SelectItem key={idx} value={grade}>
+                                {grade}
                               </SelectItem>
                             );
                           })}
@@ -306,7 +310,7 @@ export default function CropPricePredictor() {
                   name="Variety"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>State</FormLabel>
+                      <FormLabel>Variety</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
@@ -317,10 +321,10 @@ export default function CropPricePredictor() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {varieties.map((state, idx) => {
+                          {varieties.map((variety, idx) => {
                             return (
-                              <SelectItem key={idx} value={state}>
-                                {state}
+                              <SelectItem key={idx} value={variety}>
+                                {variety}
                               </SelectItem>
                             );
                           })}
@@ -394,9 +398,37 @@ export default function CropPricePredictor() {
 
           {result && (
             <div className="mt-8">
-              <h2 className="text-2xl font-bold mb-4">Prediction Result</h2>
-              <p>Predicted Crop: {result.label}</p>
-              <p>Modal Price: ₹{result.price.toFixed(2)}</p>
+              <h2 className="text-2xl font-bold mb-4">Top 3 Recommended Crops</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {result.predictions.map((prediction, index) => (
+                  <Card 
+                    key={index} 
+                    className={`${index === 0 ? 'border-2 border-green-500' : ''}`}
+                  >
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        {index === 0 && (
+                          <span className="text-green-500 text-sm font-normal border border-green-500 rounded-full px-2 py-0.5">
+                            Best Match
+                          </span>
+                        )}
+                        {prediction.crop}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Modal Price:</span>
+                          <span className="font-medium text-lg">
+                            ₹{prediction.price.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
           )}
         </CardContent>
