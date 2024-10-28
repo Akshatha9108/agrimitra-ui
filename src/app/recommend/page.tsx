@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -55,6 +55,8 @@ export default function CropPricePredictor() {
       price: number;
     }>;
   } | null>(null);
+  const [selectedState, setSelectedState] = useState<string>("");
+  const [filteredDistricts, setFilteredDistricts] = useState<string[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -74,6 +76,20 @@ export default function CropPricePredictor() {
 
     },
   });
+
+  // Add this useEffect to update districts when state changes
+  useEffect(() => {
+    if (selectedState) {
+      const stateData = states.find((s) => s.state === selectedState);
+      if (stateData) {
+        setFilteredDistricts(stateData.districts);
+      } else {
+        setFilteredDistricts([]);
+      }
+    } else {
+      setFilteredDistricts([]);
+    }
+  }, [selectedState]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -196,7 +212,12 @@ export default function CropPricePredictor() {
                     <FormItem>
                       <FormLabel>State</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedState(value);
+                          // Reset district when state changes
+                          form.setValue("District", "");
+                        }}
                         defaultValue={field.value}
                       >
                         <FormControl>
@@ -205,13 +226,11 @@ export default function CropPricePredictor() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {states.map((state, idx) => {
-                            return (
-                              <SelectItem key={idx} value={state}>
-                                {state}
-                              </SelectItem>
-                            );
-                          })}
+                          {states.map((stateData, idx) => (
+                            <SelectItem key={idx} value={stateData.state}>
+                              {stateData.state}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -227,20 +246,23 @@ export default function CropPricePredictor() {
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
+                        disabled={!selectedState}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select District" />
+                            <SelectValue placeholder={
+                              selectedState 
+                                ? "Select District" 
+                                : "Please select a state first"
+                            } />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {districts.map((district, idx) => {
-                            return (
-                              <SelectItem key={idx} value={district}>
-                                {district}
-                              </SelectItem>
-                            );
-                          })}
+                          {filteredDistricts.map((district, idx) => (
+                            <SelectItem key={idx} value={district}>
+                              {district}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
